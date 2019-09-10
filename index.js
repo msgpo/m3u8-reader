@@ -2,6 +2,7 @@
 
 var NON_QUOTED_COMMA = /,(?=(?:[^"]|"[^"]*")*$)/
 var KV_SPLITTER = /="?([^"]*)/
+var PARAM_SPLITTER = /([^" ]+)="([^"]+)"/g
 var KEY_PREFIX = '#EXT-X-'
 
 module.exports = m3u
@@ -55,13 +56,24 @@ function parseParams (line) {
   for (i = 0; i < pairs.length; ++i) {
     kvList = pairs[i].split(KV_SPLITTER)
 
-    if (pairs.length === 1 && kvList.length === 1) {
+    if (pairs.length === 1 && kvList.length === 1)
       return kvList[0]
-    }
 
-    attrs[ trim(kvList[0]) ] = kvList.length > 1
-      ? trim(kvList[1])
-      : void 0
+    const matches = pairs[i].match(PARAM_SPLITTER)
+
+    if (pairs[i] && !pairs[i].includes('=') && !matches)
+      attrs[ pairs[i] ] = void 0
+    else if (matches)
+      matches.forEach(el => {
+        const parts = (el || '').split(PARAM_SPLITTER).filter(elm => !!elm)
+        if (parts.length > 1)
+          attrs[ trim(parts[0]) ] = trim(parts[1])
+      })
+    else if (!pairs[i].includes('=""'))
+      attrs[ trim(kvList[0]) ] = kvList.length > 1
+        ? trim(kvList[1])
+        : void 0
+
   }
 
   return attrs
